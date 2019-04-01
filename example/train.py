@@ -10,8 +10,8 @@ from allennlp.modules.seq2seq_encoders import PytorchSeq2SeqWrapper
 from allennlp.data.iterators import BucketIterator
 from allennlp.training.trainer import Trainer
 from allennlp.predictors import SentenceTaggerPredictor
-from dataset_reader import PosDatasetReader
-from model import LstmTagger
+from example.dataset_reader import PosDatasetReader
+from example.model import LstmTagger
 
 
 def train(train_data_path, validation_data_path,
