@@ -1,3 +1,5 @@
+import argparse
+import logging
 import os
 
 
@@ -27,12 +29,16 @@ from example.dataset_reader import PosDatasetReader
 from example.model import LstmTagger
 
 
-def train(train_data_path, validation_data_path,
-          embedding_dim, hidden_dim,
-          learning_rate=0.1, batch_size=2, num_epochs=1000,
-          save_dir="/tmp"):
-    _train_data_path = cached_path(train_data_path)
-    _validation_data_path = cached_path(validation_data_path)
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(logging.StreamHandler(sys.stdout))
+
+
+
+def train(args):
+    _train_data_path = os.path.join(args.data_dir, "training.txt")
+    _validation_data_path = os.path.join(args.data_dir, "validation.txt")
 
     reader = PosDatasetReader()
     train_dataset = reader.read(_train_data_path)
@@ -40,9 +46,9 @@ def train(train_data_path, validation_data_path,
     vocab = Vocabulary.from_instances(train_dataset + validation_dataset)
 
     token_embedding = Embedding(num_embeddings=vocab.get_vocab_size('tokens'),
-                                embedding_dim=embedding_dim)
+                                embedding_dim=args.embedding_dim)
     word_embeddings = BasicTextFieldEmbedder({"tokens": token_embedding})
-    lstm = PytorchSeq2SeqWrapper(torch.nn.LSTM(embedding_dim, hidden_dim, batch_first=True))
+    lstm = PytorchSeq2SeqWrapper(torch.nn.LSTM(args.embedding_dim, args.hidden_dim, batch_first=True))
     model = LstmTagger(word_embeddings, lstm, vocab)
 
     if torch.cuda.is_available():
@@ -51,8 +57,8 @@ def train(train_data_path, validation_data_path,
     else:
         cuda_device = -1
 
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
-    iterator = BucketIterator(batch_size=batch_size,
+    optimizer = optim.SGD(model.parameters(), lr=args.lr)
+    iterator = BucketIterator(batch_size=args.batch_size,
                               sorting_keys=[("sentence", "num_tokens")])
     iterator.index_with(vocab)
     trainer = Trainer(model=model,
@@ -61,7 +67,7 @@ def train(train_data_path, validation_data_path,
                       train_dataset=train_dataset,
                       validation_dataset=validation_dataset,
                       patience=10,
-                      num_epochs=num_epochs,
+                      num_epochs=args.epochs,
                       cuda_device=cuda_device)
     trainer.train()
 
@@ -71,8 +77,8 @@ def train(train_data_path, validation_data_path,
     print([model.vocab.get_token_from_index(i, 'labels') for i in tag_ids])
 
     # Here's how to save the model.
-    model_path = os.path.join(save_dir, "model.th")
-    vocab_path = os.path.join(save_dir, "vocabulary")
+    model_path = os.path.join(args.model_dir, "model.th")
+    vocab_path = os.path.join(args.model_dir, "vocabulary")
     with open(model_path, 'wb') as f:
         torch.save(model.state_dict(), f)
     vocab.save_to_files(vocab_path)
@@ -91,12 +97,22 @@ def train(train_data_path, validation_data_path,
 
 
 if __name__ == "__main__":
-    root = 'https://raw.githubusercontent.com/allenai/allennlp/master/tutorials/tagger/'
-    train_data_path = root + 'training.txt'
-    validation_data_path = root + 'validation.txt'
+    parser = argparse.ArgumentParser()
 
-    embedding_dim = 6
-    hidden_dim = 6
+    # Data and model checkpoints directories
+    parser.add_argument("--batch-size", type=int, default=2, metavar="N",
+                        help="input batch size for training (default: 2)")
+    parser.add_argument("--epochs", type=int, default=1000, metavar="N",
+                        help="number of epochs to train (default: 1000)")
+    parser.add_argument("--lr", type=float, default=0.1, metavar="LR",
+                        help="learning rate (default: 0.1)")
+    parser.add_argument("--embedding-dim", type=int, default=6, metavar="N",
+                        help="dimension of embedding vector (default: 6)")
+    parser.add_argument("--hidden-dim", type=int, default=6, metavar="N",
+                        help="dimension of hidden vector (default: 6)")
 
-    train(train_data_path, validation_data_path,
-          embedding_dim, hidden_dim)
+    # Container environment
+    parser.add_argument("--model-dir", type=str, default=os.environ["SM_MODEL_DIR"])
+    parser.add_argument("--data-dir", type=str, default=os.environ["SM_CHANNEL_TRAINING"])
+
+    train(parser.parse_args())
