@@ -29,7 +29,7 @@ from example.model import LstmTagger
 
 def train(train_data_path, validation_data_path,
           embedding_dim, hidden_dim,
-          learning_rate=0.1, batch_size=2,
+          learning_rate=0.1, batch_size=2, num_epochs=1000,
           save_dir="/tmp"):
     _train_data_path = cached_path(train_data_path)
     _validation_data_path = cached_path(validation_data_path)
@@ -61,7 +61,7 @@ def train(train_data_path, validation_data_path,
                       train_dataset=train_dataset,
                       validation_dataset=validation_dataset,
                       patience=10,
-                      num_epochs=1000,
+                      num_epochs=num_epochs,
                       cuda_device=cuda_device)
     trainer.train()
 
