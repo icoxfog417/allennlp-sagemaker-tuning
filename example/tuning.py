@@ -1,10 +1,10 @@
 import argparse
 import logging
 import os
+import sys
 
 
 def set_pythonpath():
-    import sys
     python_version = "python" + str(sys.version_info.major) \
                      + "." + str(sys.version_info.minor)
     venv_dir = "../.venv/lib/{}/site-packages".format(python_version)
@@ -37,9 +37,9 @@ logger.addHandler(logging.StreamHandler(sys.stdout))
 
 
 def train(args):
-    _train_data_path = os.path.join(args.data_dir, "training.txt")
-    _validation_data_path = os.path.join(args.data_dir, "validation.txt")
-
+    _train_data_path = os.path.join(args.data_dir, args.train_file_name)
+    _validation_data_path = os.path.join(args.data_dir, args.validation_file_name)
+    print(_train_data_path)
     reader = PosDatasetReader()
     train_dataset = reader.read(_train_data_path)
     validation_dataset = reader.read(_validation_data_path)
@@ -110,9 +110,11 @@ if __name__ == "__main__":
                         help="dimension of embedding vector (default: 6)")
     parser.add_argument("--hidden-dim", type=int, default=6, metavar="N",
                         help="dimension of hidden vector (default: 6)")
+    parser.add_argument("--train-file-name", type=str, default="training.txt")
+    parser.add_argument("--validation-file-name", type=str, default="validation.txt")
 
     # Container environment
-    parser.add_argument("--model-dir", type=str, default=os.environ["SM_MODEL_DIR"])
-    parser.add_argument("--data-dir", type=str, default=os.environ["SM_CHANNEL_TRAINING"])
+    parser.add_argument("--model-dir", type=str, default=os.getenv("SM_MODEL_DIR", "/tmp"))
+    parser.add_argument("--data-dir", type=str, default=os.getenv("SM_CHANNEL_TRAINING", "data"))
 
     train(parser.parse_args())
