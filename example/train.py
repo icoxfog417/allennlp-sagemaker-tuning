@@ -1,4 +1,17 @@
 import os
+
+
+def set_pythonpath():
+    import sys
+    python_version = "python" + str(sys.version_info.major) \
+                     + "." + str(sys.version_info.minor)
+    venv_dir = "../.venv/lib/{}/site-packages".format(python_version)
+    lib_dir = os.path.join(os.path.dirname(__file__), venv_dir)
+    project_dir = os.path.join(os.path.dirname(__file__), "../")
+    sys.path.append(lib_dir)
+    sys.path.append(project_dir)
+
+set_pythonpath()
 import torch
 import torch.optim as optim
 import numpy as np
