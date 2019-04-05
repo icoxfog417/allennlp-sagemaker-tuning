@@ -29,7 +29,7 @@ from example.model import LstmTagger
 
 def train(train_data_path, validation_data_path,
           embedding_dim, hidden_dim,
-          learning_rate=0.1, batch_size=2, num_epochs=1000,
+          learning_rate=0.1, batch_size=2, num_epochs=100,
           save_dir="/tmp"):
     _train_data_path = cached_path(train_data_path)
     _validation_data_path = cached_path(validation_data_path)
@@ -63,7 +63,10 @@ def train(train_data_path, validation_data_path,
                       patience=10,
                       num_epochs=num_epochs,
                       cuda_device=cuda_device)
-    trainer.train()
+    metrics = trainer.train()
+    for m in metrics:
+        if m.startswith("validation"):
+            print("{}={}".format(m, metrics[m]))
 
     predictor = SentenceTaggerPredictor(model, dataset_reader=reader)
     tag_logits = predictor.predict("The dog ate the apple")['tag_logits']

@@ -29,13 +29,6 @@ from example.dataset_reader import PosDatasetReader
 from example.model import LstmTagger
 
 
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-logger.addHandler(logging.StreamHandler(sys.stdout))
-
-
-
 def train(args):
     _train_data_path = os.path.join(args.data_dir, args.train_file_name)
     _validation_data_path = os.path.join(args.data_dir, args.validation_file_name)
@@ -69,7 +62,10 @@ def train(args):
                       patience=10,
                       num_epochs=args.epochs,
                       cuda_device=cuda_device)
-    trainer.train()
+    metrics = trainer.train()
+    for m in metrics:
+        if m.startswith("validation"):
+            print("{}={}".format(m, metrics[m]))
 
     predictor = SentenceTaggerPredictor(model, dataset_reader=reader)
     tag_logits = predictor.predict("The dog ate the apple")['tag_logits']
